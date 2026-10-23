@@ -1,40 +1,392 @@
-const questions=[["你通常在哪里收看各类视频？", ["短视频平台", "社交平台", "电视或视频网站", "校园广播或活动", "其他渠道", "没接触过"]], ["哪类内容你看得最多？", ["新闻热点—刚出的热搜大事、突发消息", "综艺访谈—下饭综艺、人物访谈", "知识分享—三分钟讲透一个知识点", "生活日常—宿舍日常、校园Vlog", "校园资讯—讲座比赛、社团招新", "颜值频道—帅哥美女", "其他内容—以上都不太符合"]], ["你一般什么时候看？", ["起床赖床时", "吃饭时", "课间或水课时", "通勤排队时", "上厕所时", "睡前躺床上时", "熬夜但停不下来时", "时间很随机"]], ["平均每天，你会看多久？", ["30分钟—1小时", "1—2小时", "2—4小时", "4—6小时", "6—8小时", "8—12小时", "12—20小时", "20小时及以上（住手机里了）", "记不清"]], ["你看这些内容，主要图什么？", ["了解新鲜事", "学点东西", "放松解闷", "找点共鸣", "看喜欢的主持人", "跟上大家的话题", "其他原因", "没看过"]], ["同样一件事，你更爱听哪种主持人讲？", ["直奔重点，不绕弯", "像朋友聊天，没距离", "幽默有梗，能逗笑", "讲得明白，让人信服", "温柔走心，听着舒服", "没有特别偏好"]], ["短视频口播里，你更吃哪种形式？", ["3秒抛梗型—开头就抓人", "边讲边演型—小剧场+口播", "干货清单型—一二三讲清楚", "聊天陪伴型—像室友唠嗑", "犀利点评型—有态度但不冒犯", "沉浸叙事型—讲故事带情绪", "没有特别偏好"]], ["校园资讯，你一般在哪些场景接触到？", ["校园广播", "校园活动/晚会", "社团招新宣传", "校园社群通知", "课堂/讲座播放", "同学转发", "没接触过"]], ["校园主持风格，你更偏好哪一种？", ["稳重大气控场型", "轻松幽默救场型", "亲切聊天互动型", "专业清晰播报型", "有梗有网感型", "没有特别偏好"]], ["中国大陆新生代主持人里，你更偏好哪一类？", ["央视新生代—如冯琳、张舒越", "新闻资讯新生代—如王嘉宁、马凡舒", "卫视综艺新生代—如齐思钧、沈梦辰", "网络口播/访谈新生代—如董宇辉、何运晨", "校园活动主持—如校内晚会/赛事主持人", "没有特别偏好"]], ["什么情况下你会划走？", ["开头太磨叽", "语气太说教", "内容不新鲜", "主持人风格不感冒", "画面/字幕太乱", "广告感太重", "一般不划走"]], ["看完这类内容后，你通常会？", ["点赞收藏", "转发给同学", "搜主持人/账号", "评论区聊两句", "当背景音继续放着", "看完就划走", "没看过"]], ["你最希望新生代主持人具备什么？", ["嘴替感—说出我想说", "稳场能力—不冷场不翻车", "幽默但不冒犯", "信息密度高—别水", "真诚不端着", "有校园共鸣", "没有特别偏好"]]];
-const names=['静音情报员','校园情报站','冷面梗侦探','热梗速递员','下饭陪伴家','课间暖场王','快乐潜水员','气氛发动机','深潜研究员','知识传送门','犀利观察家','观点扩音器','深夜树洞客','共鸣连接者','故事收藏家','话题策展人'];
+const questions = [
+  [
+    "你的性别",
+    [
+      "女",
+      "男"
+    ],
+    {
+      "type": "single",
+      "maxChoices": 1,
+      "letters": [
+        "A",
+        "B"
+      ]
+    }
+  ],
+  [
+    "你的年级",
+    [
+      "本科",
+      "硕士研究生",
+      "博士研究生",
+      "其他"
+    ],
+    {
+      "type": "single",
+      "maxChoices": 1,
+      "letters": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ]
+    }
+  ],
+  [
+    "你的专业类别",
+    [
+      "人文科学（Humanities）：研究人本身、文化、精神，哲学、文学、历史、艺术",
+      "社会科学（Social Sciences）：研究人类社会运行，经济学、法学、教育学、传播学、管理学",
+      "自然科学（Natural Sciences）及应用科学：研究客观自然界，理学，工学、农学、医学",
+      "其他"
+    ],
+    {
+      "type": "single",
+      "maxChoices": 1,
+      "letters": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ]
+    }
+  ],
+  [
+    "你会不会刷播音、口播、校园融媒体这类内容？",
+    [
+      "几乎每天刷",
+      "每周3-5次",
+      "每周1-2次",
+      "偶尔看看",
+      "基本不看（直接跳到末尾提交）"
+    ],
+    {
+      "type": "single",
+      "maxChoices": 1,
+      "letters": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ]
+    }
+  ],
+  [
+    "你刷这类内容最常用的平台是？",
+    [
+      "官方媒体（央视/电视台节目等）",
+      "短视频平台（抖音/小红书等）",
+      "网络互动平台（知乎/微博等）",
+      "校园官方融媒体账号",
+      "其他"
+    ],
+    {
+      "type": "single",
+      "maxChoices": 1,
+      "letters": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ]
+    }
+  ],
+  [
+    "你一般在什么时间段接触口播/播音类内容？",
+    [
+      "早间（上下课路上）",
+      "午间（吃饭、午休前后）",
+      "晚间休闲时段",
+      "睡前",
+      "没有固定时间，刷到就看"
+    ],
+    {
+      "type": "multiple",
+      "maxChoices": 5,
+      "letters": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "F"
+      ]
+    }
+  ],
+  [
+    "你可以接受的单条短视频口播最优时长是？",
+    [
+      "60秒以内",
+      "1–5分钟",
+      "5-10分钟",
+      "10-30分钟",
+      "30分钟以上"
+    ],
+    {
+      "type": "single",
+      "maxChoices": 1,
+      "letters": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ]
+    }
+  ],
+  [
+    "你最常观看/收听的口播、播音类内容类型是？",
+    [
+      "生活娱乐类：搞笑日常、潮流分享",
+      "知识学习类：科普干货、专业内容讲解、AI/科技/新传、虚拟主播内容",
+      "情感成长类：治愈故事、成长感悟、人生分享",
+      "社会资讯类：新闻资讯、时事评论",
+      "文化艺文类：音乐、朗读、文学赏析",
+      "校园专属类：校园通知、校园活动宣传",
+      "其他"
+    ],
+    {
+      "type": "multiple",
+      "maxChoices": 7,
+      "letters": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G"
+      ]
+    }
+  ],
+  [
+    "抓住你的眼球，让你愿意继续看下去的首要原因？【不超过三项】",
+    [
+      "主播的声音、普通话与表达功底",
+      "内容干货足，观点有价值",
+      "共情力强，容易产生共鸣",
+      "画面剪辑好看",
+      "内容轻松解压好玩",
+      "内容真实可信"
+    ],
+    {
+      "type": "multiple",
+      "maxChoices": 3,
+      "letters": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    }
+  ],
+  [
+    "下面哪一类口播视频，是你最不想点开观看的？",
+    [
+      "过度营销类：硬广堆砌、强行带货的口播",
+      "情绪对立类：刻意引战、煽动矛盾的争议口播",
+      "内容质量差类：空洞无物的流水账，或是片面不实的伪科普、谣言口播",
+      "低俗博眼球类：靠低俗玩梗博取流量的娱乐吐槽口播",
+      "其他"
+    ],
+    {
+      "type": "single",
+      "maxChoices": 1,
+      "letters": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ]
+    }
+  ],
+  [
+    "这类口播/播音内容，会传递审美、观念，拓宽我的认知。（打分规则：1=完全不同意，5=完全同意）",
+    [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+    ],
+    {
+      "type": "rating",
+      "maxChoices": 1,
+      "letters": [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    }
+  ],
+  [
+    "你刷到的很多口播内容藏着广告、带货等商业推广目的。",
+    [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+    ],
+    {
+      "type": "rating",
+      "maxChoices": 1,
+      "letters": [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    }
+  ],
+  [
+    "看完一段口播视频，你通常会？",
+    [
+      "默默看完，不留任何互动",
+      "偶尔点赞收藏，很少留言",
+      "经常评论发表想法",
+      "转发分享给朋友"
+    ],
+    {
+      "type": "single",
+      "maxChoices": 1,
+      "letters": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ]
+    }
+  ],
+  [
+    "你刷这类内容最主要的目的是？",
+    [
+      "涨知识、了解社会热点",
+      "解压放松，获得情绪陪伴",
+      "学习表达、提升审美",
+      "紧跟热点，方便和同学聊天",
+      "单纯打发空闲时间"
+    ],
+    {
+      "type": "single",
+      "maxChoices": 1,
+      "letters": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ]
+    }
+  ],
+  [
+    "相同主题下，你更愿意相信哪类账号的口播内容？",
+    [
+      "电视台/广播等官方媒体",
+      "校园官方融媒体",
+      "自媒体博主",
+      "商业营销账号"
+    ],
+    {
+      "type": "single",
+      "maxChoices": 1,
+      "letters": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ]
+    }
+  ],
+  [
+    "除上面选择的首选平台之外，你还会从哪些渠道看这类内容？",
+    [
+      "央视/卫视等官方媒体",
+      "抖音/快手",
+      "小红书/视频号",
+      "B站",
+      "校园官方融媒体账号",
+      "其他"
+    ],
+    {
+      "type": "multiple",
+      "maxChoices": 6,
+      "letters": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ]
+    }
+  ]
+];
 
-// v1: each tuple is [S/D,I/E,W/M,Q/V]; positive means first pole. Zero = no evidence.
+const names = ['静音情报员','校园情报站','冷面梗侦探','热梗速递员','下饭陪伴家','课间暖场王','快乐潜水员','气氛发动机','深潜研究员','知识传送门','犀利观察家','观点扩音器','深夜树洞客','共鸣连接者','故事收藏家','话题策展人'];
 
-const score=[
+// Entertainment-only interpretation, not a scoring system supplied by the questionnaire.
+// Gender, degree, major, viewing frequency, platforms, trust and agreement ratings do not score personality.
+const zero = count => Array.from({ length: count }, () => [0, 0, 0, 0]);
+const score = [
+  zero(2), zero(4), zero(4), zero(5), zero(5),
+  [[1,0,0,0],[0,0,0,0],[-1,0,0,0],[-1,0,0,0],[0,0,0,0]],
+  [[3,0,0,0],[1,0,0,0],[-1,0,0,0],[-2,0,0,0],[-3,0,0,0]],
+  [[0,-2,0,0],[0,2,0,0],[0,-2,0,0],[0,2,0,0],[0,0,0,0],[0,1,0,0],[0,0,0,0]],
+  [[0,0,2,0],[0,2,1,0],[0,-2,-2,0],[0,0,0,0],[0,-2,-2,0],[0,0,2,0]],
+  zero(5), zero(5), zero(5),
+  [[0,0,0,3],[0,0,0,1],[0,0,0,-3],[0,0,0,-3]],
+  [[0,3,0,0],[0,-3,0,0],[0,2,0,0],[0,1,0,0],[0,0,0,0]],
+  zero(4), zero(6),
+];
+function isAnswered(answer, index) {
+  const [, options, meta] = questions[index];
+  const valid = value => Number.isInteger(value) && value >= 0 && value < options.length;
+  return meta.type === 'multiple'
+    ? Array.isArray(answer) && answer.length > 0 && answer.length <= meta.maxChoices && new Set(answer).size === answer.length && answer.every(valid)
+    : valid(answer);
+}
+function activeCount(answers) { return answers[3] === 4 ? 4 : questions.length; }
+function isComplete(answers) {
+  return Array.isArray(answers) && answers.length === questions.length && answers.slice(0, activeCount(answers)).every((answer, index) => isAnswered(answer, index));
+}
+function selectedOptions(answers, index) {
+  if (!isAnswered(answers[index], index)) return [];
+  return Array.isArray(answers[index]) ? answers[index] : [answers[index]];
+}
+function answerLabel(answers, index) { return selectedOptions(answers, index).map(option => questions[index][1][option]).join('；'); }
+function contribution(answers, index, dimension) {
+  const selected = selectedOptions(answers, index);
+  if (!selected.length) return { sum: 0, total: 0 };
+  // Average within each multiple-choice question so extra selections do not increase its weight.
+  return {
+    sum: selected.reduce((n, option) => n + score[index][option][dimension], 0) / selected.length,
+    total: selected.reduce((n, option) => n + Math.abs(score[index][option][dimension]), 0) / selected.length,
+  };
+}
+function calculate(answers) {
+  if (!isComplete(answers)) throw new RangeError('Complete answers required');
+  const hidden = activeCount(answers) === 4;
+  const sum = [0,0,0,0], total = [0,0,0,0];
+  if (!hidden) answers.forEach((_, index) => sum.forEach((__, dimension) => {
+    const value = contribution(answers, index, dimension);
+    sum[dimension] += value.sum; total[dimension] += value.total;
+  }));
+  const bits = sum.map(n => n < 0 ? 1 : 0);
+  return {
+    code: hidden ? 'ZEN' : bits.map((bit, index) => ['SD','IE','WM','QV'][index][bit]).join(''),
+    name: hidden ? '佛系观察员' : names[bits.reduce((value, bit) => value * 2 + bit, 0)],
+    bits, pct: sum.map((n, i) => total[i] ? Math.round(50 + 50 * n / total[i]) : 50), total, hidden,
+  };
+}
+function info(result) { return { tags: result.hidden ? ['自带节奏','轻量接触'] : ['校园观察','自在冲浪'] }; }
 
-[[1,0,0,0],[1,0,0,0],[-1,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]],
-
-[[0,2,0,0],[0,-2,0,0],[0,2,0,0],[0,-1,0,0],[0,2,0,0],[0,0,0,0],[0,0,0,0]],
-
-[[1,0,0,0],[1,0,0,0],[2,0,0,0],[2,0,0,0],[2,0,0,0],[-1,0,0,0],[-2,0,0,0],[1,0,0,0]],
-
-[[2,0,0,0],[1,0,0,0],[-1,0,0,0],[-2,0,0,0],[-2,0,0,0],[-2,0,0,0],[-2,0,0,0],[-2,0,0,0],[0,0,0,0]],
-
-[[0,3,0,0],[0,3,0,0],[0,-3,0,0],[0,-3,0,0],[0,-2,0,0],[0,-1,0,0],[0,0,0,0],[0,0,0,0]],
-
-[[0,0,1,0],[0,0,2,0],[0,0,-2,0],[0,0,2,0],[0,0,2,0],[0,0,0,0]],
-
-[[1,0,-2,0],[0,0,-1,0],[0,1,1,0],[0,-1,2,0],[0,0,-2,0],[-1,-1,1,0],[0,0,0,0]],
-
-Array(7).fill([0,0,0,0]),
-
-[[0,0,3,0],[0,0,-3,0],[0,0,2,0],[0,0,3,0],[0,0,-3,0],[0,0,0,0]],
-
-Array(6).fill([0,0,0,0]),
-
-[[1,0,0,0],[0,0,-1,0],[0,1,0,0],[0,0,0,0],[0,0,1,0],[0,0,0,0],[-1,0,0,0]],
-
-[[0,0,0,-1],[0,0,0,-3],[0,0,0,-1],[0,0,0,-3],[0,0,0,3],[0,0,0,2],[0,0,0,0]],
-
-[[0,0,-2,0],[0,0,2,0],[0,0,-2,0],[0,2,1,0],[0,-1,2,0],[0,-2,1,0],[0,0,0,0]]];
-
-function calculate(a){let sum=[0,0,0,0],total=[0,0,0,0];a.forEach((v,i)=>score[i][v].forEach((n,k)=>{sum[k]+=n;total[k]+=Math.abs(n)}));let hidden=[a[0]===5,a[4]===7,a[7]===6,a[11]===6].filter(Boolean).length>=4 || (a.every((v,i)=>v===questions[i][1].length-1));let bits=sum.map(n=>n<0?1:0),code=bits.map((b,i)=>['SD','IE','WM','QV'][i][b]).join('');return {code:hidden?'ZEN':code,name:hidden?'佛系观察员':names[bits.reduce((s,b)=>s*2+b,0)],bits,pct:sum.map((n,i)=>total[i]?Math.round(50+50*n/total[i]):50),total,hidden}}
-
-
-function info(r){let [d,e,m,v]=r.bits;return r.hidden?{desc:'你不急着加入每一场屏幕狂欢，也不需要靠刷屏填满生活。过去七天里，这些内容在你的日常中存在感很轻；比起被算法安排，你更愿意把注意力留给眼前的人和事。偶尔遇到真正感兴趣的内容，也可以停一停。保持自己的节奏，就是你的观看方式。',tags:['自带节奏','偶尔上线','自在观察'],scene:'按需查看校园通知、线下活动与同学推荐。',host:'当前接触较少，暂不推断你的主持风格偏好。',buddy:'信息中转站型室友：需要时帮你带来关键校园消息。'}:{desc:(d?'你会为感兴趣的内容多停一会儿，愿意跟着叙事走进细节。':'你的屏幕时间藏在生活缝隙里，抓住重点就能快乐离场。')+(e?'你点开的不只是内容，也是放松、共鸣和一点陪伴。':'比起无目的地停留，你更愿意带走新消息与实用知识。')+(m?'有梗、有态度的表达更容易让你留下来。':'自然可信、让人舒服的表达更能留住你。')+(v?'看到值得聊的内容，你会把话题传给同频的人。':'不一定发言，安静看完也有自己的收获。'),tags:[d?'沉浸观看':'碎片冲浪',e?'共鸣充电':'信息捕手',v?'分享雷达':'安静在线'],scene:d?(e?'夜间校园广播、人物故事、毕业季访谈。':'课堂讲座、深度校园访谈、知识专题。'):(v?'社团招新、晚会预热、社群通知。':'课间校园简讯、用餐口播、活动速览。'),host:m?'幽默有梗、有态度但不冒犯，能灵活救场的主持。':'亲切真诚、清晰可信，能稳住现场的主持。',buddy:e?(v?'下饭搭子型同学：一起笑，一起把新梗带回宿舍。':'深夜树洞型朋友：不用抢话，也能听懂彼此。'):(v?'校园行动派搭子：你传消息，TA带你去现场。':'信息中转站型室友：交换重点，各自安心做事。')}}
-
-
-export { questions, names, score, calculate, info };
+export { questions, names, score, calculate, info, isAnswered, activeCount, isComplete, selectedOptions, answerLabel, contribution };

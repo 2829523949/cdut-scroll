@@ -1,14 +1,14 @@
-import { questions, calculate, info } from './model.js';
-import { buildInsights } from './insights.js';
+import { questions, calculate, info, isAnswered, activeCount, isComplete } from './model.js?v=wjx-20261023';
+import { buildInsights } from './insights.js?v=wjx-20261023';
 import { createQRCode } from './qr.js';
 
 const PUBLIC_URL = new URL('.', location.href).href;
-const STORAGE_KEY = 'cdut-scroll-preview-v2';
+const STORAGE_KEY = 'cdut-scroll-questionnaire-v3';
 const app = document.querySelector('#app');
 const dialog = document.querySelector('#share-dialog');
 const arrow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>';
 const backArrow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg>';
-const axes = [['随手刷 S', '深潜刷 D'], ['信息脑 I', '情绪脑 E'], ['暖场稳场 W', '梗场犀利 M'], ['潜水陪伴 Q', '扩音互动 V']];
+const axes = [['随手刷 S', '深潜刷 D'], ['信息脑 I', '情绪脑 E'], ['专业清晰 W', '轻松共鸣 M'], ['潜水陪伴 Q', '扩音互动 V']];
 let state = readState();
 let toastTimer;
 let shareTrigger;
@@ -19,16 +19,17 @@ function readState() {
   try {
     const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY));
     if (!saved || !Array.isArray(saved.answers) || saved.answers.length !== questions.length) return blankState();
-    if (!saved.answers.every((answer, index) => answer === null || (Number.isInteger(answer) && answer >= 0 && answer < questions[index][1].length))) return blankState();
-    return { answers: saved.answers, step: Number.isInteger(saved.step) ? Math.max(0, Math.min(12, saved.step)) : 0, consent: saved.consent === true };
+    if (!saved.answers.every((answer, index) => answer === null || isAnswered(answer, index))) return blankState();
+    return { answers: saved.answers, step: Number.isInteger(saved.step) ? Math.max(0, Math.min(activeCount(saved.answers) - 1, saved.step)) : 0, consent: saved.consent === true };
   } catch { return blankState(); }
 }
 function saveState() {
   try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
   catch { if (storageAvailable) { storageAvailable = false; toast('这次进度暂时无法保留，离开页面前请先完成测试。'); } }
 }
-function answeredCount() { return state.answers.filter(answer => answer !== null).length; }
-function complete() { return answeredCount() === questions.length; }
+function answeredCount() { return state.answers.slice(0, activeCount(state.answers)).filter((answer, index) => isAnswered(answer, index)).length; }
+function complete() { return isComplete(state.answers); }
+function firstUnanswered() { return state.answers.slice(0, activeCount(state.answers)).findIndex((answer, index) => !isAnswered(answer, index)); }
 function escapeHTML(value) { return String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character])); }
 function toast(message) {
   const element = document.querySelector('#toast');
@@ -49,9 +50,9 @@ function renderRoute(focus = true) {
   if (location.hash === '#result' && complete() && state.consent) renderResult();
   else if (questionMatch && state.consent) {
     const requested = Number(questionMatch[1]) - 1;
-    const firstEmpty = state.answers.indexOf(null);
-    const available = firstEmpty === -1 ? 12 : firstEmpty;
-    state.step = Math.max(0, Math.min(requested, available, 12));
+    const firstEmpty = firstUnanswered();
+    const available = firstEmpty === -1 ? activeCount(state.answers) - 1 : firstEmpty;
+    state.step = Math.max(0, Math.min(requested, available, activeCount(state.answers) - 1));
     if (requested !== state.step) history.replaceState(null, '', `#question-${state.step + 1}`);
     saveState(); renderQuestion();
   } else {
@@ -64,11 +65,11 @@ function renderHome() {
   document.title = '成理刷屏人格测试 · 成理青年观察';
   const count = answeredCount();
   app.innerHTML = `<section class="home">
-    ${count ? `<div class="resume-note">${complete() ? '你的人格画像已解锁，可以再看看。' : `上次已完成 ${count} / 13 题，可以接着答。`} <button class="text-button" id="clear-progress">清除本次进度</button></div>` : ''}
+    ${count ? `<div class="resume-note">${complete() ? '你的人格画像已解锁，可以再看看。' : `上次已完成 ${count} / ${activeCount(state.answers)} 题，可以接着答。`} <button class="text-button" id="clear-progress">清除本次进度</button></div>` : ''}
     <div class="hero-layout">
       <div class="intro"><h1><span>成理人，</span><span>你是哪种</span><span>刷屏人格？</span></h1>
-        <p class="lead">课间随手刷，还是睡前深潜？<br>13 道小题，找到你的校园冲浪同频搭子。</p>
-        <div class="facts"><div><strong>13</strong>道单选题</div><div><strong>≈ 2</strong>分钟完成</div><div><strong>16 + 1</strong>种画像</div></div>
+        <p class="lead">课间随手刷，还是睡前深潜？<br>从内容习惯出发，找到你的校园冲浪同频搭子。</p>
+        <div class="facts"><div><strong>16</strong>题 · 多种题型</div><div><strong>≈ 3</strong>分钟完成</div><div><strong>16 + 1</strong>种画像</div></div>
         <form id="start-form" class="start-form"><label class="consent"><input type="checkbox" id="agree" name="preview-consent" ${state.consent ? 'checked' : ''} required><span>我了解这是娱乐向测试，会按最近 7 天的真实习惯作答。</span></label>
           <button class="button primary full" type="submit" id="start-button" ${state.consent ? '' : 'disabled'}>${complete() ? '查看我的人格结果' : count ? '继续我的测试' : '解锁我的刷屏人格'} ${arrow}</button>
         </form><p class="helper start-helper">娱乐向测试，不构成心理测量，不代表能力或优劣。</p>
@@ -83,7 +84,7 @@ function renderHome() {
         </div><p class="helper center sample-label">人格图鉴 · 部分展示</p>
       </div>
     </div>
-    <div class="home-footnote"><span>回想过去 7 天，按你的真实习惯选择。</span><span>没有标准答案，也没有哪一种更优秀。</span></div>
+    <div class="home-footnote"><span>第 4 题选择“基本不看”，将直接结束测试。</span><span>没有标准答案，也没有哪一种更优秀。</span></div>
     <div id="restart-region"></div>
   </section>`;
   const agree = app.querySelector('#agree');
@@ -97,41 +98,62 @@ function renderHome() {
 }
 function renderQuestion() {
   const index = state.step;
-  const [title, options] = questions[index];
-  document.title = `第 ${index + 1} / 13 题 · 成理刷屏人格测试`;
-  const firstEmpty = state.answers.indexOf(null);
-  const furthest = firstEmpty === -1 ? 12 : firstEmpty;
+  const [title, options, meta] = questions[index];
+  const multiple = meta.type === 'multiple';
+  const rating = meta.type === 'rating';
+  const selected = multiple ? state.answers[index] || [] : [state.answers[index]];
+  const ratingWords = ['完全不同意', '不同意', '中立', '同意', '完全同意'];
+  document.title = `第 ${index + 1} / ${questions.length} 题 · 成理刷屏人格测试`;
+  const hint = multiple ? `可多选${meta.maxChoices < options.length ? `，最多选择 ${meta.maxChoices} 项` : ''}，至少选择一项。` : rating ? '按认同程度打分：1 = 完全不同意，5 = 完全同意。' : index === 3 ? '选择“基本不看”后，将跳过后续问题，直接查看轻接触画像。' : index < 3 ? '选择符合你的情况的一项；基本信息不参与人格评分。' : '回想过去 7 天，选择最符合你的一项。';
   app.innerHTML = `<div class="question-shell">
     <aside class="question-sidebar"><a href="#home" class="back-home">${backArrow} 返回测试首页</a><h2>我的刷屏切片</h2><p>慢慢选，照着你的节奏来。</p>
-      <nav class="step-grid" aria-label="题目导航">${questions.map((_, i) => `<button class="step-button ${state.answers[i] !== null ? 'done' : ''} ${i === index ? 'current' : ''}" data-step="${i}" aria-label="第 ${i + 1} 题，${state.answers[i] !== null ? '已作答' : '未作答'}" ${i === index ? 'aria-current="step"' : ''} ${i > furthest ? 'disabled' : ''}>${String(i + 1).padStart(2, '0')}</button>`).join('')}</nav>
+      <nav class="step-grid" aria-label="题目导航">${questions.map((_, i) => `<button class="step-button ${i === index ? 'current' : ''}" data-step="${i}" ${i === index ? 'aria-current="step"' : ''}>${String(i + 1).padStart(2, '0')}</button>`).join('')}</nav>
       <p class="local-note">答案没有好坏之分。<br>按你最近的真实习惯选择就好。</p>
     </aside>
-    <section class="question-content" aria-labelledby="question-title"><div class="progress-heading"><span id="progress-label">已完成 ${answeredCount()} 道题</span><strong>第 ${index + 1} / 13 题</strong></div><progress max="13" value="${answeredCount()}" aria-label="已完成的题目数量"></progress>
-      <form id="question-form"><fieldset><legend id="question-title">${escapeHTML(title)}</legend><p class="helper question-hint" id="question-hint">${index === 3 ? '只算上述内容，不算全部刷手机时间。本题未设少于 30 分钟 / 未接触选项，请选最接近的一项或“记不清”。' : '回想过去 7 天，选择最符合你的一项。'}</p>
-        <div class="options">${options.map((option, i) => `<label class="option"><input type="radio" name="answer" value="${i}" aria-describedby="question-hint" ${state.answers[index] === i ? 'checked' : ''}><span class="option-letter" aria-hidden="true">${String.fromCharCode(65 + i)}</span><span class="option-text">${escapeHTML(option)}</span></label>`).join('')}</div>
-      </fieldset><div class="question-nav"><a class="button" href="${index ? `#question-${index}` : '#home'}">${backArrow}${index ? '上一题' : '返回首页'}</a><button class="button primary" type="submit" id="next-button" ${state.answers[index] === null ? 'disabled' : ''}>${index === 12 ? '生成人格结果' : '下一题'} ${arrow}</button></div>
-      <p class="question-status" role="status" aria-live="polite" id="selection-status">${state.answers[index] !== null ? '已选择，可修改后继续。' : ''}</p>${complete() ? '<a class="text-button review-result" href="#result">更新并查看画像</a>' : ''}</form>
+    <section class="question-content" aria-labelledby="question-title"><div class="progress-heading"><span id="progress-label"></span><strong id="question-position"></strong></div><progress value="${answeredCount()}" max="${activeCount(state.answers)}" aria-label="已完成的题目数量"></progress>
+      <form id="question-form"><fieldset><legend id="question-title">${escapeHTML(title)}</legend><p class="helper question-hint" id="question-hint">${hint}</p>
+        <div class="options ${rating ? 'rating-options' : ''}">${options.map((option, i) => `<label class="option"><input type="${multiple ? 'checkbox' : 'radio'}" name="answer" value="${i}" aria-describedby="question-hint" ${selected.includes(i) ? 'checked' : ''}><span class="option-letter" aria-hidden="${rating ? 'false' : 'true'}">${rating ? option : meta.letters[i]}</span><span class="option-text">${escapeHTML(rating ? ratingWords[i] : option)}</span></label>`).join('')}</div>
+      </fieldset><div class="question-nav"><a class="button" href="${index ? `#question-${index}` : '#home'}">${backArrow}${index ? '上一题' : '返回首页'}</a><button class="button primary" type="submit" id="next-button"></button></div>
+      <p class="question-status" role="status" aria-live="polite" id="selection-status"></p><a class="text-button review-result" id="review-result" href="#result" hidden>更新并查看画像</a></form>
       <p class="helper center question-bottom">没有哪一种更优秀。你的答案只代表这一次的观看习惯。</p>
     </section>
   </div>`;
   app.querySelectorAll('[data-step]').forEach(button => button.addEventListener('click', () => navigate(`#question-${Number(button.dataset.step) + 1}`)));
+  function updateQuestionUI() {
+    const count = activeCount(state.answers), empty = firstUnanswered();
+    const furthest = empty === -1 ? count - 1 : empty;
+    const valid = isAnswered(state.answers[index], index);
+    app.querySelector('#next-button').disabled = !valid;
+    app.querySelector('#next-button').innerHTML = `${index === count - 1 ? '生成人格结果' : '下一题'} ${arrow}`;
+    app.querySelector('#progress-label').textContent = `已完成 ${answeredCount()} 道题`;
+    app.querySelector('#question-position').textContent = `第 ${index + 1} / ${count} 题`;
+    app.querySelector('progress').max = count; app.querySelector('progress').value = answeredCount();
+    const picked = multiple ? state.answers[index] || [] : [];
+    app.querySelector('#selection-status').textContent = multiple ? `已选 ${picked.length} 项${meta.maxChoices < options.length ? `，最多 ${meta.maxChoices} 项` : ''}。` : index === 3 && count === 4 ? '后续 12 题已跳过，可以直接查看画像。' : valid ? '已选择，可修改后继续。' : '';
+    if (multiple) app.querySelectorAll('input[name="answer"]').forEach(input => { input.disabled = picked.length >= meta.maxChoices && !input.checked; });
+    app.querySelectorAll('[data-step]').forEach(button => {
+      const i = Number(button.dataset.step), skipped = i >= count, done = isAnswered(state.answers[i], i) && !skipped;
+      button.disabled = skipped || i > furthest;
+      button.classList.toggle('done', done); button.classList.toggle('skipped', skipped);
+      button.setAttribute('aria-label', `第 ${i + 1} 题，${skipped ? '已跳过' : done ? '已作答' : '未作答'}`);
+    });
+    app.querySelector('#review-result').hidden = !complete();
+  }
   app.querySelector('#question-form').addEventListener('change', event => {
     if (event.target.name !== 'answer') return;
-    state.answers[index] = Number(event.target.value); saveState();
-    app.querySelector('#next-button').disabled = false;
-    app.querySelector('#selection-status').textContent = '已选择，可修改后继续。';
-    app.querySelector('#progress-label').textContent = `已完成 ${answeredCount()} 道题`;
-    app.querySelector('progress').value = answeredCount();
-    const current = app.querySelector(`[data-step="${index}"]`);
-    current.classList.add('done'); current.setAttribute('aria-label', `第 ${index + 1} 题，已作答`);
-    const following = app.querySelector(`[data-step="${index + 1}"]`);
-    if (following) following.disabled = false;
+    if (multiple) {
+      const picked = [...app.querySelectorAll('input[name="answer"]:checked')].map(input => Number(input.value));
+      if (picked.length > meta.maxChoices) { event.target.checked = false; toast(`本题最多选择 ${meta.maxChoices} 项，请先取消一项。`); return; }
+      state.answers[index] = picked.length ? picked : null;
+    } else state.answers[index] = Number(event.target.value);
+    saveState(); updateQuestionUI();
   });
   app.querySelector('#question-form').addEventListener('submit', event => {
     event.preventDefault();
-    if (state.answers[index] === null) { toast('先选择一项，再继续。'); app.querySelector('input[type="radio"]').focus(); return; }
-    navigate(index === 12 ? '#result' : `#question-${index + 2}`);
+    if (!isAnswered(state.answers[index], index)) { toast('先选择至少一项，再继续。'); app.querySelector('input[name="answer"]').focus(); return; }
+    navigate(index === activeCount(state.answers) - 1 ? '#result' : `#question-${index + 2}`);
   });
+  updateQuestionUI();
 }
 function renderResult() {
   const result = calculate(state.answers);
@@ -140,17 +162,17 @@ function renderResult() {
   document.title = `${result.name} · 我的成理刷屏人格`;
   app.innerHTML = `<section class="result-shell"><div class="result-top"><div><p class="result-intro">你的成理刷屏人格已解锁</p><div class="result-code" translate="no">${result.code}</div><h1>${result.name}</h1><div class="tags">${content.tags.map(tag => `<span>${tag}</span>`).join('')}</div></div><img class="result-mascot" src="assets/scroll-buddies.png" alt="" width="1024" height="1024"></div>
     <p class="result-desc">${report.summary}</p>
-    <section class="result-section dimensions-section" aria-labelledby="axes-title"><h2 id="axes-title">你的四维切片</h2><p class="helper">从观看节奏、内容动机、表达口味和互动方式，看看这次回答里的你。</p>${report.dimensions.map(dimension => {
+    <section class="result-section dimensions-section" aria-labelledby="axes-title"><h2 id="axes-title">你的四维切片</h2><p class="helper">从观看节奏、内容动机、表达关注和互动方式，看看这次回答里的你。</p>${report.dimensions.map(dimension => {
       const percent = dimension.leftPercent;
-      return `<article class="dimension" data-dimension="${dimension.id}" data-status="${dimension.status}"><div class="dimension-heading"><h3>${dimension.title}</h3><span class="dimension-badge">${dimension.label}</span></div><div class="axis-label"><span>${dimension.left} ${percent === null ? '' : `<strong>${percent}%</strong>`}</span><span>${percent === null ? '' : `<strong>${100 - percent}%</strong>`} ${dimension.right}</span></div><div class="axis-track ${percent === null ? 'axis-empty' : ''}" aria-hidden="true">${percent === null ? '' : `<span style="width:${percent}%"></span>`}</div><p class="dimension-description">${dimension.description}</p>${dimension.evidence.length ? `<details class="dimension-evidence"><summary>看看这条切片的依据</summary><p class="helper">${dimension.note}</p><ul>${dimension.evidence.map(item => `<li><a href="#question-${item.index + 1}">第 ${item.index + 1} 题</a><span>你选择了“${escapeHTML(item.answer)}”</span><small>更靠近${item.direction}</small></li>`).join('')}</ul></details>` : ''}</article>`;
+      return `<article class="dimension" data-dimension="${dimension.id}" data-status="${dimension.status}"><div class="dimension-heading"><h3>${dimension.title}</h3><span class="dimension-badge">${dimension.label}</span></div><div class="axis-label"><span>${dimension.left} ${percent === null ? '' : `<strong>${percent}%</strong>`}</span><span>${percent === null ? '' : `<strong>${100 - percent}%</strong>`} ${dimension.right}</span></div><div class="axis-track ${percent === null ? 'axis-empty' : ''}" aria-hidden="true">${percent === null ? '' : `<span style="width:${percent}%"></span>`}</div><p class="dimension-description">${dimension.description}</p>${dimension.evidence.length ? `<details class="dimension-evidence"><summary>看看这条切片的依据</summary><p class="helper">${dimension.note}</p><ul>${dimension.evidence.map(item => `<li><a href="#question-${item.index + 1}">第 ${item.index + 1} 题</a><span>你选择了“${escapeHTML(item.answer)}”</span><small>${item.direction}</small></li>`).join('')}</ul></details>` : ''}</article>`;
     }).join('')}<p class="helper axis-note">比例表示本次回答中的倾向，不是人群排名、能力分数或心理测量。线索不足时不显示比例。</p></section>
-    <section class="host-section" aria-labelledby="host-title"><h2 id="host-title">你的主持风格偏好</h2><h3 class="host-heading">${report.host.title}</h3><p class="host-intro">${report.host.intro}</p><div class="host-profiles">${[...report.host.recommendations, ...report.host.exploration].map((profile, index) => `<details class="host-profile" ${index === 0 ? 'open' : ''}><summary><span>${profile.title}</span><small>${report.host.status === 'open' ? '可以探索' : profile.primary ? '更合拍' : '也可尝试'}</small></summary><div class="host-profile-body"><p>${profile.summary}</p><div class="tags">${profile.tags.map(tag => `<span>${tag}</span>`).join('')}</div><dl><dt>适合的内容形式</dt><dd>${profile.format}</dd><dt>一句话感受这种表达</dt><dd class="host-sample">“${profile.sample}”</dd></dl></div></details>`).join('')}</div>${report.host.evidence.length ? `<details class="host-evidence"><summary>为什么这样推荐？</summary><ul>${report.host.evidence.map(item => `<li><a href="#question-${item.index + 1}">第 ${item.index + 1} 题</a><span>${escapeHTML(item.answer)}</span></li>`).join('')}</ul><p class="helper">推荐只参考你直接选择的表达偏好，不根据你喜欢的具体人物类别推断性格。</p></details>` : ''}${report.host.avoidance ? `<div class="watch-preference"><h3>${report.host.avoidance.title}</h3><p>${report.host.avoidance.text}</p><a class="text-button" href="#question-11">回看这项选择</a></div>` : ''}</section>
+    <section class="host-section" aria-labelledby="host-title"><h2 id="host-title">适合尝试的主持风格</h2><h3 class="host-heading">${report.host.title}</h3><p class="host-intro">${report.host.intro}</p><div class="host-profiles">${[...report.host.recommendations, ...report.host.exploration].map((profile, index) => `<details class="host-profile" ${index === 0 ? 'open' : ''}><summary><span>${profile.title}</span><small>${report.host.status === 'open' ? '可以探索' : profile.primary ? '优先尝试' : '也可尝试'}</small></summary><div class="host-profile-body"><p>${profile.summary}</p><div class="tags">${profile.tags.map(tag => `<span>${tag}</span>`).join('')}</div><dl><dt>适合的内容形式</dt><dd>${profile.format}</dd><dt>一句话感受这种表达</dt><dd class="host-sample">“${profile.sample}”</dd></dl></div></details>`).join('')}</div>${report.host.evidence.length ? `<details class="host-evidence"><summary>为什么这样推荐？</summary><ul>${report.host.evidence.map(item => `<li><a href="#question-${item.index + 1}">第 ${item.index + 1} 题</a><span>${escapeHTML(item.answer)}</span></li>`).join('')}</ul><p class="helper">建议参考内容兴趣、吸引你继续观看的原因和主要目的，不使用性别、年级、专业或账号来源推断主持风格。</p></details>` : ''}${report.host.avoidance ? `<div class="watch-preference"><h3>${report.host.avoidance.title}</h3><p>${report.host.avoidance.text}</p><a class="text-button" href="#question-10">回看这项选择</a></div>` : ''}</section>
     <section class="result-section suggestions"><div><h2>适合出没的校园场景</h2>${report.scenes.map(scene => `<h3 class="scene-title">${scene.title}</h3><p>${scene.text}</p>`).join('')}</div><div><h2>试试这样发现同频内容</h2><p>${report.host.status === 'matched' ? '先选一种推荐的表达风格，看一小段同主题内容；再换另一种，留意哪种让你更愿意看下去。' : '从你正在关心的问题开始挑内容，喜欢就继续，不喜欢就换一个。偏好可以慢慢发现。'}</p><p class="helper discovery-note">想法变了也没关系，可以返回修改答案，看看画像怎样变化。</p></div></section>
-    <section class="buddy"><h2>你的同频校园搭子</h2><p>${report.buddy}</p></section>
+    ${report.observations.length ? `<section class="result-section observations"><h2>你的内容观察</h2><p class="helper">保留你的原始感受，不合并成能力或人格分数。</p>${report.observations.map(item => `<article><h3>${item.title}</h3><p>${escapeHTML(item.text)}</p><a class="text-button" href="#question-${item.index + 1}">回看第 ${item.index + 1} 题</a></article>`).join('')}</section>` : ''}<section class="buddy"><h2>你的同频校园搭子</h2><p>${report.buddy}</p></section>
     <p class="receipt">画像已经解锁。把它分享给校园搭子，看看你们有哪些同频的地方。</p>
     <div class="result-actions"><button class="button primary" id="make-card">生成我的分享卡片 ${arrow}</button><button class="button" id="copy-text">复制分享文案</button></div><button class="text-button invite-friend" id="invite-friend">邀请朋友也来测一测</button><div id="share-fallback" class="share-output" hidden></div>
-    <div class="question-nav"><a class="text-button" href="#question-13">返回检查答案</a><button class="text-button" id="restart">重新测试</button></div><div id="restart-region"></div>
-    <details class="rules"><summary>怎样理解这份画像？</summary><p>四维切片概括你这次回答的倾向；主持风格则结合你对表达方式、口播形式、校园主持和理想特质的直接选择。两边都合拍，或还没有明显偏好，都是正常结果。</p><p>人格代号方便区分画像，不是永久标签。你可以点开各项依据，回看或修改答案。所有内容仅供轻松交流，不构成心理测量，也不代表能力或优劣。</p></details>
+    <div class="question-nav"><a class="text-button" href="#question-${activeCount(state.answers)}">返回检查答案</a><button class="text-button" id="restart">重新测试</button></div><div id="restart-region"></div>
+    <details class="rules"><summary>怎样理解这份画像？</summary><p>四维切片是基于本次观看习惯制作的娱乐解读，不是问卷提供的标准量表。多选题按题内平均计入，性别、年级、专业、账号来源与认同评分不参与人格计分。主持风格根据内容兴趣与观看原因提供尝试建议。两边都合拍，或还没有明显偏好，都是正常结果。</p><p>人格代号方便区分画像，不是永久标签。你可以点开各项依据，回看或修改答案。所有内容仅供轻松交流，不构成心理测量，也不代表能力或优劣。</p></details>
   </section>`;
   app.querySelector('#make-card').addEventListener('click', event => makeCard(result, content, event.currentTarget, report));
   app.querySelector('#copy-text').addEventListener('click', () => copyText(result, content));
@@ -212,7 +234,7 @@ async function makeCard(result, content, trigger, report) {
       if (percent !== null) { context.fillStyle = '#7050db'; context.fillRect(65, y + 20, 770 * percent / 100, 17); }
     });
     context.fillStyle = '#292532'; context.font = 'bold 28px "Microsoft YaHei", sans-serif'; context.fillText('宿舍这么大，', 65, 1010); context.fillText('总有一个同频的你。', 65, 1055);
-    context.fillStyle = '#696274'; context.font = '20px "Microsoft YaHei", sans-serif'; context.fillText('13 道题 / 约 2 分钟', 65, 1110); context.fillText('扫码，找到你的校园搭子', 65, 1145);
+    context.fillStyle = '#696274'; context.font = '20px "Microsoft YaHei", sans-serif'; context.fillText(result.hidden ? '轻量接触 / 自在观察' : '16 道题 / 约 3 分钟', 65, 1110); context.fillText('扫码，找到你的校园搭子', 65, 1145);
     context.drawImage(qr, 650, 970, 190, 190);
     context.font = '16px "Microsoft YaHei", sans-serif'; context.fillText('娱乐向测试 · 不构成心理测量', 65, 1200);
     context.fillText('百分比为选项计分占比，不是心理测量或人群百分位', 65, 1230);
