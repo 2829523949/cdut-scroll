@@ -1,0 +1,48 @@
+.dimensions-section{background:var(--white);border:0;border-radius:16px;padding:28px 30px}
+.dimensions-section>h2{margin-bottom:10px}
+.dimensions-section>.helper{max-width:60ch}
+.dimension{padding:26px 0;border-bottom:1px solid var(--line)}
+.dimension:last-of-type{border:0;padding-bottom:10px}
+.dimension-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.dimension-heading h3{font-size:16px;font-weight:700}
+.dimension-badge{font-size:11px;font-weight:600;line-height:1.6;color:var(--purple-dark);background:var(--lavender);border-radius:6px;padding:5px 9px}
+.dimension[data-status="balanced"] .dimension-badge{background:var(--green);color:#3a4c2a}
+.dimension[data-status="unknown"] .dimension-badge,.dimension[data-status="limited"] .dimension-badge{background:var(--paper);color:var(--muted)}
+.axis-track.axis-empty{background:var(--line)}
+.dimension-description{font-size:13px;color:var(--muted);margin-top:14px;line-height:1.9}
+.dimension-evidence{margin-top:8px;font-size:12px;color:var(--muted)}
+.dimension-evidence summary,.host-evidence summary{cursor:pointer;min-height:44px;padding-top:13px;color:var(--purple-dark);line-height:1.8}
+.dimension-evidence ul,.host-evidence ul{list-style:none;padding:0;margin:6px 0 0}
+.dimension-evidence li{padding:9px 0;display:grid;grid-template-columns:62px minmax(0,1fr);column-gap:10px;align-items:center;border-top:1px solid #eeeaf3}
+.dimension-evidence li a,.host-evidence li a{display:inline-flex;min-height:44px;align-items:center;color:var(--purple-dark)}
+.dimension-evidence li span{line-height:1.8;overflow-wrap:anywhere}
+.dimension-evidence li small{grid-column:2;font-size:11px;color:var(--muted);padding-bottom:4px}
+.host-section{padding-top:34px;margin-top:4px}
+.host-section>h2{font-size:20px;margin-bottom:18px}
+.host-heading{font-size:16px;line-height:1.7;margin-bottom:10px;color:var(--purple-dark)}
+.host-intro{font-size:13px;color:var(--muted);line-height:1.9;max-width:66ch}
+.host-profiles{display:grid;gap:12px;margin-top:22px}
+.host-profile{background:var(--white);border-radius:12px;padding:0 22px}
+.host-profile>summary{min-height:64px;line-height:1.8;padding:21px 0;cursor:pointer;font-size:15px;font-weight:650;color:var(--ink)}
+.host-profile>summary small{float:right;font-size:11px;font-weight:500;color:var(--purple-dark);background:var(--lavender);padding:3px 8px;border-radius:5px;margin-top:1px;margin-left:10px}
+.host-profile-body{padding-bottom:23px}
+.host-profile-body>p{font-size:13px;color:var(--muted);line-height:1.9}
+.host-profile .tags{margin-top:14px}
+.host-profile dl{margin:20px 0 0;font-size:12px;line-height:1.9}
+.host-profile dt{font-weight:650;color:var(--ink);margin-top:15px}
+.host-profile dd{margin:6px 0 0;color:var(--muted)}
+.host-profile dd.host-sample{background:var(--paper);border-radius:8px;padding:13px 16px;font-size:13px;color:#584d6d}
+.host-evidence{font-size:12px;color:var(--muted);margin-top:9px}
+.host-evidence li{display:grid;grid-template-columns:62px minmax(0,1fr);gap:10px;align-items:center;min-height:46px;border-bottom:1px solid var(--line);line-height:1.8}
+.host-evidence>.helper{margin-top:12px}
+.watch-preference{padding:20px 0 2px;margin-top:16px;border-top:1px solid var(--line)}
+.watch-preference h3{font-size:15px;margin-bottom:8px}
+.watch-preference p{font-size:13px;color:var(--muted);line-height:1.9}
+.watch-preference .text-button{display:inline-flex;align-items:center;line-height:1.8}
+.scene-title{font-size:14px;margin-top:20px;margin-bottom:8px;font-weight:650}
+.scene-title:first-of-type{margin-top:4px}
+.discovery-note{margin-top:18px}
+@media(max-width:600px){
+ .dimensions-section{padding:24px 20px}.dimension{padding:23px 0}.dimension-heading{gap:9px;margin-bottom:14px}.dimension-heading h3{font-size:15px}.dimension-description{font-size:13px}.dimension-evidence li{grid-template-columns:50px minmax(0,1fr);gap:6px}.dimension-badge{font-size:11px}
+ .host-section{padding:28px 2px 0}.host-section>h2{font-size:19px;margin-bottom:16px}.host-heading{font-size:15px}.host-intro{font-size:13px}.host-profile{padding:0 17px}.host-profile>summary{font-size:14px;min-height:62px}.host-profile>summary small{font-size:11px;padding:3px 7px}.host-profile dd.host-sample{padding:12px 13px}.host-evidence li{grid-template-columns:50px minmax(0,1fr)}
+}

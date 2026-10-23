@@ -1,0 +1,255 @@
+import { questions, calculate, info } from './model.js';
+import { buildInsights } from './insights.js';
+import { createQRCode } from './qr.js';
+
+const PUBLIC_URL = new URL('.', location.href).href;
+const STORAGE_KEY = 'cdut-scroll-preview-v2';
+const app = document.querySelector('#app');
+const dialog = document.querySelector('#share-dialog');
+const arrow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>';
+const backArrow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg>';
+const axes = [['随手刷 S', '深潜刷 D'], ['信息脑 I', '情绪脑 E'], ['暖场稳场 W', '梗场犀利 M'], ['潜水陪伴 Q', '扩音互动 V']];
+let state = readState();
+let toastTimer;
+let shareTrigger;
+let storageAvailable = true;
+
+function blankState() { return { answers: Array(questions.length).fill(null), step: 0, consent: false }; }
+function readState() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY));
+    if (!saved || !Array.isArray(saved.answers) || saved.answers.length !== questions.length) return blankState();
+    if (!saved.answers.every((answer, index) => answer === null || (Number.isInteger(answer) && answer >= 0 && answer < questions[index][1].length))) return blankState();
+    return { answers: saved.answers, step: Number.isInteger(saved.step) ? Math.max(0, Math.min(12, saved.step)) : 0, consent: saved.consent === true };
+  } catch { return blankState(); }
+}
+function saveState() {
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch { if (storageAvailable) { storageAvailable = false; toast('这次进度暂时无法保留，离开页面前请先完成测试。'); } }
+}
+function answeredCount() { return state.answers.filter(answer => answer !== null).length; }
+function complete() { return answeredCount() === questions.length; }
+function escapeHTML(value) { return String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character])); }
+function toast(message) {
+  const element = document.querySelector('#toast');
+  clearTimeout(toastTimer); element.textContent = message; element.classList.add('visible');
+  toastTimer = setTimeout(() => element.classList.remove('visible'), 4000);
+}
+function navigate(hash) {
+  if (location.hash === hash) renderRoute(true);
+  else location.hash = hash;
+}
+function focusPage() {
+  const target = app.querySelector('h1, legend');
+  if (target) { target.tabIndex = -1; target.focus({ preventScroll: true }); }
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+function renderRoute(focus = true) {
+  const questionMatch = location.hash.match(/^#question-(\d+)$/);
+  if (location.hash === '#result' && complete() && state.consent) renderResult();
+  else if (questionMatch && state.consent) {
+    const requested = Number(questionMatch[1]) - 1;
+    const firstEmpty = state.answers.indexOf(null);
+    const available = firstEmpty === -1 ? 12 : firstEmpty;
+    state.step = Math.max(0, Math.min(requested, available, 12));
+    if (requested !== state.step) history.replaceState(null, '', `#question-${state.step + 1}`);
+    saveState(); renderQuestion();
+  } else {
+    if (location.hash !== '#home' && location.hash !== '') history.replaceState(null, '', '#home');
+    renderHome();
+  }
+  if (focus) focusPage();
+}
+function renderHome() {
+  document.title = '成理刷屏人格测试 · 成理青年观察';
+  const count = answeredCount();
+  app.innerHTML = `<section class="home">
+    ${count ? `<div class="resume-note">${complete() ? '你的人格画像已解锁，可以再看看。' : `上次已完成 ${count} / 13 题，可以接着答。`} <button class="text-button" id="clear-progress">清除本次进度</button></div>` : ''}
+    <div class="hero-layout">
+      <div class="intro"><h1><span>成理人，</span><span>你是哪种</span><span>刷屏人格？</span></h1>
+        <p class="lead">课间随手刷，还是睡前深潜？<br>13 道小题，找到你的校园冲浪同频搭子。</p>
+        <div class="facts"><div><strong>13</strong>道单选题</div><div><strong>≈ 2</strong>分钟完成</div><div><strong>16 + 1</strong>种画像</div></div>
+        <form id="start-form" class="start-form"><label class="consent"><input type="checkbox" id="agree" name="preview-consent" ${state.consent ? 'checked' : ''} required><span>我了解这是娱乐向测试，会按最近 7 天的真实习惯作答。</span></label>
+          <button class="button primary full" type="submit" id="start-button" ${state.consent ? '' : 'disabled'}>${complete() ? '查看我的人格结果' : count ? '继续我的测试' : '解锁我的刷屏人格'} ${arrow}</button>
+        </form><p class="helper start-helper">娱乐向测试，不构成心理测量，不代表能力或优劣。</p>
+      </div>
+      <div class="hero-scene">
+        <span class="scene-note note-one">课间随手刷</span>
+        <img class="hero-art" src="assets/scroll-buddies.png" alt="紫色和浅绿色的校园冲浪搭子一起看手机" width="1024" height="1024" fetchpriority="high">
+        <span class="scene-note note-two">睡前再看一条</span>
+        <p class="scene-caption">你的刷屏习惯，偷偷有个人格。</p>
+        <div class="type-tickets" aria-label="部分人格图鉴展示，不代表你的测试结果">
+          <div><span translate="no">SIWQ</span><strong>静音情报员</strong></div><div><span translate="no">DIWV</span><strong>知识传送门</strong></div><div><span translate="no">SEMQ</span><strong>快乐潜水员</strong></div>
+        </div><p class="helper center sample-label">人格图鉴 · 部分展示</p>
+      </div>
+    </div>
+    <div class="home-footnote"><span>回想过去 7 天，按你的真实习惯选择。</span><span>没有标准答案，也没有哪一种更优秀。</span></div>
+    <div id="restart-region"></div>
+  </section>`;
+  const agree = app.querySelector('#agree');
+  agree.addEventListener('change', () => { state.consent = agree.checked; saveState(); app.querySelector('#start-button').disabled = !agree.checked; });
+  app.querySelector('#start-form').addEventListener('submit', event => {
+    event.preventDefault(); if (!agree.checked) return;
+    state.consent = true; saveState();
+    navigate(complete() ? '#result' : `#question-${state.step + 1}`);
+  });
+  app.querySelector('#clear-progress')?.addEventListener('click', () => promptRestart('#restart-region'));
+}
+function renderQuestion() {
+  const index = state.step;
+  const [title, options] = questions[index];
+  document.title = `第 ${index + 1} / 13 题 · 成理刷屏人格测试`;
+  const firstEmpty = state.answers.indexOf(null);
+  const furthest = firstEmpty === -1 ? 12 : firstEmpty;
+  app.innerHTML = `<div class="question-shell">
+    <aside class="question-sidebar"><a href="#home" class="back-home">${backArrow} 返回测试首页</a><h2>我的刷屏切片</h2><p>慢慢选，照着你的节奏来。</p>
+      <nav class="step-grid" aria-label="题目导航">${questions.map((_, i) => `<button class="step-button ${state.answers[i] !== null ? 'done' : ''} ${i === index ? 'current' : ''}" data-step="${i}" aria-label="第 ${i + 1} 题，${state.answers[i] !== null ? '已作答' : '未作答'}" ${i === index ? 'aria-current="step"' : ''} ${i > furthest ? 'disabled' : ''}>${String(i + 1).padStart(2, '0')}</button>`).join('')}</nav>
+      <p class="local-note">答案没有好坏之分。<br>按你最近的真实习惯选择就好。</p>
+    </aside>
+    <section class="question-content" aria-labelledby="question-title"><div class="progress-heading"><span id="progress-label">已完成 ${answeredCount()} 道题</span><strong>第 ${index + 1} / 13 题</strong></div><progress max="13" value="${answeredCount()}" aria-label="已完成的题目数量"></progress>
+      <form id="question-form"><fieldset><legend id="question-title">${escapeHTML(title)}</legend><p class="helper question-hint" id="question-hint">${index === 3 ? '只算上述内容，不算全部刷手机时间。本题未设少于 30 分钟 / 未接触选项，请选最接近的一项或“记不清”。' : '回想过去 7 天，选择最符合你的一项。'}</p>
+        <div class="options">${options.map((option, i) => `<label class="option"><input type="radio" name="answer" value="${i}" aria-describedby="question-hint" ${state.answers[index] === i ? 'checked' : ''}><span class="option-letter" aria-hidden="true">${String.fromCharCode(65 + i)}</span><span class="option-text">${escapeHTML(option)}</span></label>`).join('')}</div>
+      </fieldset><div class="question-nav"><a class="button" href="${index ? `#question-${index}` : '#home'}">${backArrow}${index ? '上一题' : '返回首页'}</a><button class="button primary" type="submit" id="next-button" ${state.answers[index] === null ? 'disabled' : ''}>${index === 12 ? '生成人格结果' : '下一题'} ${arrow}</button></div>
+      <p class="question-status" role="status" aria-live="polite" id="selection-status">${state.answers[index] !== null ? '已选择，可修改后继续。' : ''}</p>${complete() ? '<a class="text-button review-result" href="#result">更新并查看画像</a>' : ''}</form>
+      <p class="helper center question-bottom">没有哪一种更优秀。你的答案只代表这一次的观看习惯。</p>
+    </section>
+  </div>`;
+  app.querySelectorAll('[data-step]').forEach(button => button.addEventListener('click', () => navigate(`#question-${Number(button.dataset.step) + 1}`)));
+  app.querySelector('#question-form').addEventListener('change', event => {
+    if (event.target.name !== 'answer') return;
+    state.answers[index] = Number(event.target.value); saveState();
+    app.querySelector('#next-button').disabled = false;
+    app.querySelector('#selection-status').textContent = '已选择，可修改后继续。';
+    app.querySelector('#progress-label').textContent = `已完成 ${answeredCount()} 道题`;
+    app.querySelector('progress').value = answeredCount();
+    const current = app.querySelector(`[data-step="${index}"]`);
+    current.classList.add('done'); current.setAttribute('aria-label', `第 ${index + 1} 题，已作答`);
+    const following = app.querySelector(`[data-step="${index + 1}"]`);
+    if (following) following.disabled = false;
+  });
+  app.querySelector('#question-form').addEventListener('submit', event => {
+    event.preventDefault();
+    if (state.answers[index] === null) { toast('先选择一项，再继续。'); app.querySelector('input[type="radio"]').focus(); return; }
+    navigate(index === 12 ? '#result' : `#question-${index + 2}`);
+  });
+}
+function renderResult() {
+  const result = calculate(state.answers);
+  const report = buildInsights(state.answers);
+  const content = { ...info(result), tags: report.tags };
+  document.title = `${result.name} · 我的成理刷屏人格`;
+  app.innerHTML = `<section class="result-shell"><div class="result-top"><div><p class="result-intro">你的成理刷屏人格已解锁</p><div class="result-code" translate="no">${result.code}</div><h1>${result.name}</h1><div class="tags">${content.tags.map(tag => `<span>${tag}</span>`).join('')}</div></div><img class="result-mascot" src="assets/scroll-buddies.png" alt="" width="1024" height="1024"></div>
+    <p class="result-desc">${report.summary}</p>
+    <section class="result-section dimensions-section" aria-labelledby="axes-title"><h2 id="axes-title">你的四维切片</h2><p class="helper">从观看节奏、内容动机、表达口味和互动方式，看看这次回答里的你。</p>${report.dimensions.map(dimension => {
+      const percent = dimension.leftPercent;
+      return `<article class="dimension" data-dimension="${dimension.id}" data-status="${dimension.status}"><div class="dimension-heading"><h3>${dimension.title}</h3><span class="dimension-badge">${dimension.label}</span></div><div class="axis-label"><span>${dimension.left} ${percent === null ? '' : `<strong>${percent}%</strong>`}</span><span>${percent === null ? '' : `<strong>${100 - percent}%</strong>`} ${dimension.right}</span></div><div class="axis-track ${percent === null ? 'axis-empty' : ''}" aria-hidden="true">${percent === null ? '' : `<span style="width:${percent}%"></span>`}</div><p class="dimension-description">${dimension.description}</p>${dimension.evidence.length ? `<details class="dimension-evidence"><summary>看看这条切片的依据</summary><p class="helper">${dimension.note}</p><ul>${dimension.evidence.map(item => `<li><a href="#question-${item.index + 1}">第 ${item.index + 1} 题</a><span>你选择了“${escapeHTML(item.answer)}”</span><small>更靠近${item.direction}</small></li>`).join('')}</ul></details>` : ''}</article>`;
+    }).join('')}<p class="helper axis-note">比例表示本次回答中的倾向，不是人群排名、能力分数或心理测量。线索不足时不显示比例。</p></section>
+    <section class="host-section" aria-labelledby="host-title"><h2 id="host-title">你的主持风格偏好</h2><h3 class="host-heading">${report.host.title}</h3><p class="host-intro">${report.host.intro}</p><div class="host-profiles">${[...report.host.recommendations, ...report.host.exploration].map((profile, index) => `<details class="host-profile" ${index === 0 ? 'open' : ''}><summary><span>${profile.title}</span><small>${report.host.status === 'open' ? '可以探索' : profile.primary ? '更合拍' : '也可尝试'}</small></summary><div class="host-profile-body"><p>${profile.summary}</p><div class="tags">${profile.tags.map(tag => `<span>${tag}</span>`).join('')}</div><dl><dt>适合的内容形式</dt><dd>${profile.format}</dd><dt>一句话感受这种表达</dt><dd class="host-sample">“${profile.sample}”</dd></dl></div></details>`).join('')}</div>${report.host.evidence.length ? `<details class="host-evidence"><summary>为什么这样推荐？</summary><ul>${report.host.evidence.map(item => `<li><a href="#question-${item.index + 1}">第 ${item.index + 1} 题</a><span>${escapeHTML(item.answer)}</span></li>`).join('')}</ul><p class="helper">推荐只参考你直接选择的表达偏好，不根据你喜欢的具体人物类别推断性格。</p></details>` : ''}${report.host.avoidance ? `<div class="watch-preference"><h3>${report.host.avoidance.title}</h3><p>${report.host.avoidance.text}</p><a class="text-button" href="#question-11">回看这项选择</a></div>` : ''}</section>
+    <section class="result-section suggestions"><div><h2>适合出没的校园场景</h2>${report.scenes.map(scene => `<h3 class="scene-title">${scene.title}</h3><p>${scene.text}</p>`).join('')}</div><div><h2>试试这样发现同频内容</h2><p>${report.host.status === 'matched' ? '先选一种推荐的表达风格，看一小段同主题内容；再换另一种，留意哪种让你更愿意看下去。' : '从你正在关心的问题开始挑内容，喜欢就继续，不喜欢就换一个。偏好可以慢慢发现。'}</p><p class="helper discovery-note">想法变了也没关系，可以返回修改答案，看看画像怎样变化。</p></div></section>
+    <section class="buddy"><h2>你的同频校园搭子</h2><p>${report.buddy}</p></section>
+    <p class="receipt">画像已经解锁。把它分享给校园搭子，看看你们有哪些同频的地方。</p>
+    <div class="result-actions"><button class="button primary" id="make-card">生成我的分享卡片 ${arrow}</button><button class="button" id="copy-text">复制分享文案</button></div><button class="text-button invite-friend" id="invite-friend">邀请朋友也来测一测</button><div id="share-fallback" class="share-output" hidden></div>
+    <div class="question-nav"><a class="text-button" href="#question-13">返回检查答案</a><button class="text-button" id="restart">重新测试</button></div><div id="restart-region"></div>
+    <details class="rules"><summary>怎样理解这份画像？</summary><p>四维切片概括你这次回答的倾向；主持风格则结合你对表达方式、口播形式、校园主持和理想特质的直接选择。两边都合拍，或还没有明显偏好，都是正常结果。</p><p>人格代号方便区分画像，不是永久标签。你可以点开各项依据，回看或修改答案。所有内容仅供轻松交流，不构成心理测量，也不代表能力或优劣。</p></details>
+  </section>`;
+  app.querySelector('#make-card').addEventListener('click', event => makeCard(result, content, event.currentTarget, report));
+  app.querySelector('#copy-text').addEventListener('click', () => copyText(result, content));
+  app.querySelector('#invite-friend').addEventListener('click', event => openShareLink(event.currentTarget));
+  app.querySelector('#restart').addEventListener('click', () => promptRestart('#restart-region'));
+}
+function promptRestart(selector) {
+  const region = app.querySelector(selector);
+  region.innerHTML = `<div class="restart-prompt" role="group" aria-label="确认重新测试">清除这次的全部答案，重新开始？<div><button class="button primary" id="confirm-restart">清除并重新开始</button><button class="button" id="cancel-restart">保留答案</button></div></div>`;
+  region.querySelector('#cancel-restart').addEventListener('click', () => { region.innerHTML = ''; (app.querySelector('#restart') || app.querySelector('#clear-progress'))?.focus(); });
+  region.querySelector('#confirm-restart').addEventListener('click', () => {
+    state = blankState(); saveState(); navigate('#home');
+  });
+  region.querySelector('#cancel-restart').focus();
+  region.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+}
+function shareText(result, content) {
+  return `我的成理刷屏人格是 ${result.code}「${result.name}」！${content.tags.join(' · ')}。来看看我们是不是同频校园搭子：${PUBLIC_URL}\n（娱乐向测试，不构成心理测量。）`;
+}
+async function copyText(result, content) {
+  const text = shareText(result, content);
+  try { await navigator.clipboard.writeText(text); toast('分享文案已复制。'); }
+  catch {
+    const fallback = app.querySelector('#share-fallback');
+    fallback.hidden = false;
+    fallback.innerHTML = '<label for="share-text">暂时无法自动复制，请长按或选中文案复制：</label><textarea id="share-text" readonly></textarea>';
+    const textarea = fallback.querySelector('textarea'); textarea.value = text; textarea.focus(); textarea.select();
+    toast('请选中下方文案，手动复制。');
+  }
+}
+function loadImage(source) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image); image.onerror = reject; image.src = source;
+  });
+}
+async function makeCard(result, content, trigger, report) {
+  trigger.disabled = true; trigger.setAttribute('aria-busy', 'true');
+  const originalLabel = trigger.innerHTML; trigger.textContent = '正在绘制分享卡片…';
+  try {
+    const [mascot, qr] = await Promise.all([loadImage('assets/scroll-buddies.png'), createQRCode(PUBLIC_URL).then(loadImage)]);
+    const canvas = document.createElement('canvas'); canvas.width = 900; canvas.height = 1260;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Canvas unavailable');
+    context.fillStyle = '#f7f5ef'; context.fillRect(0, 0, 900, 1260);
+    context.fillStyle = '#e9e1ff'; context.fillRect(0, 0, 900, 450);
+    context.fillStyle = '#7050db'; context.fillRect(0, 0, 900, 12);
+    context.font = '23px "Microsoft YaHei", sans-serif'; context.fillText('CDUT / 成理刷屏人格测试', 60, 75);
+    context.font = 'bold 100px "Microsoft YaHei", sans-serif'; context.fillText(result.code, 60, 220);
+    context.fillStyle = '#292532'; context.font = 'bold 46px "Microsoft YaHei", sans-serif'; context.fillText(result.name, 60, 300);
+    context.font = '22px "Microsoft YaHei", sans-serif'; context.fillStyle = '#5636b8'; context.fillText(content.tags.join('  /  '), 60, 365);
+    context.drawImage(mascot, 580, 115, 270, 270);
+    axes.forEach(([left, right], index) => {
+      const y = 525 + index * 105;
+      context.fillStyle = '#292532'; context.font = '24px "Microsoft YaHei", sans-serif'; context.fillText(`${left} / ${right}`, 65, y);
+      const percent = report.dimensions[index].leftPercent;
+      context.textAlign = 'right'; context.fillText(percent === null ? '待探索' : `${percent}% / ${100 - percent}%`, 835, y); context.textAlign = 'left';
+      context.fillStyle = percent === null ? '#ded9e7' : '#d9ef9d'; context.fillRect(65, y + 20, 770, 17);
+      if (percent !== null) { context.fillStyle = '#7050db'; context.fillRect(65, y + 20, 770 * percent / 100, 17); }
+    });
+    context.fillStyle = '#292532'; context.font = 'bold 28px "Microsoft YaHei", sans-serif'; context.fillText('宿舍这么大，', 65, 1010); context.fillText('总有一个同频的你。', 65, 1055);
+    context.fillStyle = '#696274'; context.font = '20px "Microsoft YaHei", sans-serif'; context.fillText('13 道题 / 约 2 分钟', 65, 1110); context.fillText('扫码，找到你的校园搭子', 65, 1145);
+    context.drawImage(qr, 650, 970, 190, 190);
+    context.font = '16px "Microsoft YaHei", sans-serif'; context.fillText('娱乐向测试 · 不构成心理测量', 65, 1200);
+    context.fillText('百分比为选项计分占比，不是心理测量或人群百分位', 65, 1230);
+    const url = canvas.toDataURL('image/png');
+    const image = document.createElement('img');
+    image.id = 'card-image'; image.alt = '我的成理刷屏人格分享卡片'; image.width = 900; image.height = 1260; image.src = url;
+    document.querySelector('#card-slot').replaceChildren(image);
+    document.querySelector('#download-card').href = url;
+    shareTrigger = trigger; dialog.showModal();
+  } catch { toast('卡片生成失败，请使用“复制分享文案”后重试。'); }
+  finally { trigger.disabled = false; trigger.removeAttribute('aria-busy'); trigger.innerHTML = originalLabel; }
+}
+document.querySelector('#public-link').value = PUBLIC_URL;
+document.querySelector('link[rel=canonical]').href = PUBLIC_URL;
+document.querySelector('meta[property="og:url"]').content = PUBLIC_URL;
+document.querySelector('meta[property="og:image"]').content = new URL('assets/scroll-buddies.png', PUBLIC_URL).href;
+const linkDialog = document.querySelector('#link-dialog');
+let linkTrigger;
+async function openShareLink(trigger) {
+  linkTrigger = trigger; linkDialog.showModal();
+  const qrImage = document.querySelector('.link-qr');
+  qrImage.hidden = true;
+  try { qrImage.src = await createQRCode(PUBLIC_URL); qrImage.hidden = false; } catch { /* The selectable link remains available. */ }
+  document.querySelector('#link-feedback').textContent = '';
+}
+async function copyPublicLink() {
+  try { await navigator.clipboard.writeText(PUBLIC_URL); document.querySelector('#link-feedback').textContent = '测试链接已复制，可以发给朋友了。'; }
+  catch {
+    const input = document.querySelector('#public-link'); input.focus(); input.select();
+    document.querySelector('#link-feedback').textContent = '暂时无法自动复制。链接已选中，请长按或按 Ctrl+C 复制。';
+  }
+}
+document.querySelector('#share-site').addEventListener('click', event => openShareLink(event.currentTarget));
+document.querySelector('#close-link').addEventListener('click', () => linkDialog.close());
+document.querySelector('#copy-link').addEventListener('click', copyPublicLink);
+linkDialog.addEventListener('close', () => linkTrigger?.focus());
+document.querySelector('#close-share').addEventListener('click', () => dialog.close());
+dialog.addEventListener('close', () => shareTrigger?.focus());
+window.addEventListener('hashchange', () => renderRoute(true));
+renderRoute(false);
