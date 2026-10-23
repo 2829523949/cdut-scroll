@@ -1,0 +1,7 @@
+{
+  "name": "cdut-results-service",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test test.mjs", "build": "node build.mjs" },
+  "devDependencies": { "wrangler": "^4.0.0", "esbuild": "^0.25.0" }
+}

@@ -1,9 +1,11 @@
 import { questions, calculate, info, isAnswered, activeCount, isComplete } from './model.js?v=wjx-20261023';
 import { buildInsights } from './insights.js?v=wjx-20261023';
 import { createQRCode } from './qr.js';
+import { collection } from './collection-config.js?v=results-20261023';
+import { PRIVACY_VERSION, newReceipt, sendResponse } from './response-client.js?v=results-20261023';
 
 const PUBLIC_URL = new URL('.', location.href).href;
-const STORAGE_KEY = 'cdut-scroll-questionnaire-v3';
+const STORAGE_KEY = 'cdut-scroll-questionnaire-v4';
 const app = document.querySelector('#app');
 const dialog = document.querySelector('#share-dialog');
 const arrow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>';
@@ -13,14 +15,16 @@ let state = readState();
 let toastTimer;
 let shareTrigger;
 let storageAvailable = true;
+let pendingSubmission = null;
 
-function blankState() { return { answers: Array(questions.length).fill(null), step: 0, consent: false }; }
+function blankState() { return { answers: Array(questions.length).fill(null), step: 0, consent: false, privacy: null, receipt: null }; }
 function readState() {
   try {
-    const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY));
+    const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || sessionStorage.getItem('cdut-scroll-questionnaire-v3'));
     if (!saved || !Array.isArray(saved.answers) || saved.answers.length !== questions.length) return blankState();
     if (!saved.answers.every((answer, index) => answer === null || isAnswered(answer, index))) return blankState();
-    return { answers: saved.answers, step: Number.isInteger(saved.step) ? Math.max(0, Math.min(activeCount(saved.answers) - 1, saved.step)) : 0, consent: saved.consent === true };
+    const receipt = saved.receipt && /^[a-f0-9-]{36}$/.test(saved.receipt.id) && /^[a-f0-9]{64}$/.test(saved.receipt.editToken) && Number.isSafeInteger(saved.receipt.revision) && saved.receipt.revision >= 0 ? saved.receipt : null;
+    return { answers: saved.answers, step: Number.isInteger(saved.step) ? Math.max(0, Math.min(activeCount(saved.answers) - 1, saved.step)) : 0, consent: saved.consent === true && (!collection.enabled || saved.privacy === PRIVACY_VERSION), privacy: saved.privacy || null, receipt };
   } catch { return blankState(); }
 }
 function saveState() {
@@ -70,7 +74,8 @@ function renderHome() {
       <div class="intro"><h1><span>成理人，</span><span>你是哪种</span><span>刷屏人格？</span></h1>
         <p class="lead">课间随手刷，还是睡前深潜？<br>从内容习惯出发，找到你的校园冲浪同频搭子。</p>
         <div class="facts"><div><strong>16</strong>题 · 多种题型</div><div><strong>≈ 3</strong>分钟完成</div><div><strong>16 + 1</strong>种画像</div></div>
-        <form id="start-form" class="start-form"><label class="consent"><input type="checkbox" id="agree" name="preview-consent" ${state.consent ? 'checked' : ''} required><span>我了解这是娱乐向测试，会按最近 7 天的真实习惯作答。</span></label>
+        <form id="start-form" class="start-form"><label class="consent"><input type="checkbox" id="agree" name="preview-consent" ${state.consent ? 'checked' : ''} required><span>${collection.enabled ? '我了解这是娱乐向测试，并同意保存本次问卷答案和画像，仅供站点管理者查看与统计。' : '我了解这是娱乐向测试，会按最近 7 天的真实习惯作答。'}</span></label>
+          ${collection.enabled ? '<p class="save-notice">保存内容包含性别、年级、专业类别、观看习惯、各题选择及画像，不要求姓名或手机号。按最近 7 天的真实感受填写即可。</p>' : ''}
           <button class="button primary full" type="submit" id="start-button" ${state.consent ? '' : 'disabled'}>${complete() ? '查看我的人格结果' : count ? '继续我的测试' : '解锁我的刷屏人格'} ${arrow}</button>
         </form><p class="helper start-helper">娱乐向测试，不构成心理测量，不代表能力或优劣。</p>
       </div>
@@ -88,10 +93,10 @@ function renderHome() {
     <div id="restart-region"></div>
   </section>`;
   const agree = app.querySelector('#agree');
-  agree.addEventListener('change', () => { state.consent = agree.checked; saveState(); app.querySelector('#start-button').disabled = !agree.checked; });
+  agree.addEventListener('change', () => { state.consent = agree.checked; state.privacy = agree.checked && collection.enabled ? PRIVACY_VERSION : null; saveState(); app.querySelector('#start-button').disabled = !agree.checked; });
   app.querySelector('#start-form').addEventListener('submit', event => {
     event.preventDefault(); if (!agree.checked) return;
-    state.consent = true; saveState();
+    state.consent = true; state.privacy = collection.enabled ? PRIVACY_VERSION : null; saveState();
     navigate(complete() ? '#result' : `#question-${state.step + 1}`);
   });
   app.querySelector('#clear-progress')?.addEventListener('click', () => promptRestart('#restart-region'));
@@ -162,6 +167,7 @@ function renderResult() {
   document.title = `${result.name} · 我的成理刷屏人格`;
   app.innerHTML = `<section class="result-shell"><div class="result-top"><div><p class="result-intro">你的成理刷屏人格已解锁</p><div class="result-code" translate="no">${result.code}</div><h1>${result.name}</h1><div class="tags">${content.tags.map(tag => `<span>${tag}</span>`).join('')}</div></div><img class="result-mascot" src="assets/scroll-buddies.png" alt="" width="1024" height="1024"></div>
     <p class="result-desc">${report.summary}</p>
+    ${collection.enabled ? '<section class="submission-panel" id="submission-panel" aria-label="答卷保存状态"><p id="submission-message" role="status" aria-live="polite">正在保存这次答卷…</p><button class="text-button" id="retry-submission" hidden>重新保存答卷</button></section>' : ''}
     <section class="result-section dimensions-section" aria-labelledby="axes-title"><h2 id="axes-title">你的四维切片</h2><p class="helper">从观看节奏、内容动机、表达关注和互动方式，看看这次回答里的你。</p>${report.dimensions.map(dimension => {
       const percent = dimension.leftPercent;
       return `<article class="dimension" data-dimension="${dimension.id}" data-status="${dimension.status}"><div class="dimension-heading"><h3>${dimension.title}</h3><span class="dimension-badge">${dimension.label}</span></div><div class="axis-label"><span>${dimension.left} ${percent === null ? '' : `<strong>${percent}%</strong>`}</span><span>${percent === null ? '' : `<strong>${100 - percent}%</strong>`} ${dimension.right}</span></div><div class="axis-track ${percent === null ? 'axis-empty' : ''}" aria-hidden="true">${percent === null ? '' : `<span style="width:${percent}%"></span>`}</div><p class="dimension-description">${dimension.description}</p>${dimension.evidence.length ? `<details class="dimension-evidence"><summary>看看这条切片的依据</summary><p class="helper">${dimension.note}</p><ul>${dimension.evidence.map(item => `<li><a href="#question-${item.index + 1}">第 ${item.index + 1} 题</a><span>你选择了“${escapeHTML(item.answer)}”</span><small>${item.direction}</small></li>`).join('')}</ul></details>` : ''}</article>`;
@@ -178,6 +184,32 @@ function renderResult() {
   app.querySelector('#copy-text').addEventListener('click', () => copyText(result, content));
   app.querySelector('#invite-friend').addEventListener('click', event => openShareLink(event.currentTarget));
   app.querySelector('#restart').addEventListener('click', () => promptRestart('#restart-region'));
+  app.querySelector('#retry-submission')?.addEventListener('click', () => persistResponse());
+  persistResponse();
+}
+async function persistResponse() {
+  if (!collection.enabled || !complete() || !state.consent || state.privacy !== PRIVACY_VERSION) return;
+  const signature = JSON.stringify(state.answers);
+  if (!state.receipt) state.receipt = newReceipt();
+  const receipt = state.receipt;
+  if (receipt.signature !== signature) { receipt.signature = signature; receipt.revision += 1; }
+  function status(kind, text) {
+    if (state.receipt?.id !== receipt.id || JSON.stringify(state.answers) !== signature) return;
+    const panel = app.querySelector('#submission-panel'); if (!panel) return;
+    panel.dataset.status = kind;
+    app.querySelector('#submission-message').textContent = text;
+    app.querySelector('#retry-submission').hidden = kind !== 'error';
+  }
+  if (receipt.savedSignature === signature) { status('saved', '答卷已保存，感谢分享你的观看习惯。'); return; }
+  if (pendingSubmission?.id === receipt.id && pendingSubmission.signature === signature) return;
+  status('saving', '正在保存这次答卷…'); saveState();
+  const task = { id: receipt.id, signature }; pendingSubmission = task;
+  try {
+    await sendResponse(collection.apiBase, structuredClone(state.answers), { ...receipt });
+    if (state.receipt?.id === receipt.id && state.receipt.signature === signature) { state.receipt.savedSignature = signature; saveState(); }
+    status('saved', '答卷已保存，感谢分享你的观看习惯。');
+  } catch (error) { status('error', error.message); }
+  finally { if (pendingSubmission === task) pendingSubmission = null; }
 }
 function promptRestart(selector) {
   const region = app.querySelector(selector);

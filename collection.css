@@ -1,0 +1,7 @@
+.save-notice{font-size:11px;line-height:1.9;color:var(--muted);margin:10px 0 0;max-width:65ch}
+.submission-panel{margin:22px 4px;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:12px;line-height:1.85;color:var(--muted)}
+.submission-panel p{margin:0}.submission-panel .text-button{min-height:44px;margin-top:5px;color:var(--purple-dark)}
+.submission-panel[data-status="saved"]{color:var(--purple-dark)}
+.submission-panel[data-status="error"]{color:#9d263d}
+.admin-entry{max-width:600px;margin:12vh auto;padding:32px}.admin-entry h1{font-size:32px;line-height:1.4}.admin-entry p{line-height:1.9;margin:20px 0 28px;color:var(--muted)}.admin-entry .button{margin:0 10px 10px 0}.admin-entry [hidden]{display:none}
+.admin-entry-link{color:var(--muted);font-size:12px;min-height:44px;display:inline-flex;align-items:center;text-underline-offset:4px}

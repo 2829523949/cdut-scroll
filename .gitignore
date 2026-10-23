@@ -1,0 +1,8 @@
+backend/node_modules/
+backend/.wrangler/
+backend/dist/
+backend/__pycache__/
+backend/.dev.vars
+backend/wrangler.local.json
+backend/*.secret.json
+*.local.json
