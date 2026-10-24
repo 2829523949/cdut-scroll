@@ -1,0 +1,6 @@
+/* A dedicated display shelf for each personality's collectible figure. */
+.result-top{grid-template-columns:minmax(0,1fr) 280px;padding:28px 30px;gap:18px}
+.result-mascot{width:100%;max-width:300px;height:auto;aspect-ratio:1;object-fit:contain;margin:0;border-radius:22px}
+@media(max-width:900px){.result-top{grid-template-columns:minmax(0,1fr) 230px;gap:12px;padding:26px}.result-top h1{font-size:27px}}
+@media(max-width:600px){.result-top{grid-template-columns:minmax(0,1fr);padding:24px;gap:20px}.result-top>div{min-width:0}.result-mascot{width:250px;max-width:100%;justify-self:center}.result-top h1{font-size:28px}.result-code{font-size:48px}.result-top .tags{gap:7px}.result-intro{font-size:12px}}
+@media(max-width:360px){.result-top{padding:20px}.result-top h1{font-size:26px}.result-mascot{width:220px}}

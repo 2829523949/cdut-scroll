@@ -3,6 +3,7 @@ import { buildInsights } from './insights.js?v=wjx-20261023';
 import { createQRCode } from './qr.js';
 import { collection } from './collection-config.js?v=results-20261023';
 import { PRIVACY_VERSION, newReceipt, sendResponse } from './response-client.js?v=results-20261023';
+import { portraitFor } from './persona-art.js?v=figures-20261024';
 
 const PUBLIC_URL = new URL('.', location.href).href;
 const STORAGE_KEY = 'cdut-scroll-questionnaire-v4';
@@ -165,7 +166,8 @@ function renderResult() {
   const report = buildInsights(state.answers);
   const content = { ...info(result), tags: report.tags };
   document.title = `${result.name} · 我的成理刷屏人格`;
-  app.innerHTML = `<section class="result-shell"><div class="result-top"><div><p class="result-intro">你的成理刷屏人格已解锁</p><div class="result-code" translate="no">${result.code}</div><h1>${result.name}</h1><div class="tags">${content.tags.map(tag => `<span>${tag}</span>`).join('')}</div></div><img class="result-mascot" src="assets/scroll-buddies.png" alt="" width="1024" height="1024"></div>
+  const portrait = portraitFor(result);
+  app.innerHTML = `<section class="result-shell"><div class="result-top"><div><p class="result-intro">你的成理刷屏人格已解锁</p><div class="result-code" translate="no">${result.code}</div><h1>${result.name}</h1><div class="tags">${content.tags.map(tag => `<span>${tag}</span>`).join('')}</div></div><img class="result-mascot" src="${portrait.src}" alt="${portrait.alt}" width="768" height="768" decoding="async" fetchpriority="high"></div>
     <p class="result-desc">${report.summary}</p>
     ${collection.enabled ? '<section class="submission-panel" id="submission-panel" aria-label="答卷保存状态"><p id="submission-message" role="status" aria-live="polite">正在保存这次答卷…</p><button class="text-button" id="retry-submission" hidden>重新保存答卷</button></section>' : ''}
     <section class="result-section dimensions-section" aria-labelledby="axes-title"><h2 id="axes-title">你的四维切片</h2><p class="helper">从观看节奏、内容动机、表达关注和互动方式，看看这次回答里的你。</p>${report.dimensions.map(dimension => {
@@ -245,7 +247,7 @@ async function makeCard(result, content, trigger, report) {
   trigger.disabled = true; trigger.setAttribute('aria-busy', 'true');
   const originalLabel = trigger.innerHTML; trigger.textContent = '正在绘制分享卡片…';
   try {
-    const [mascot, qr] = await Promise.all([loadImage('assets/scroll-buddies.png'), createQRCode(PUBLIC_URL).then(loadImage)]);
+    const [mascot, qr] = await Promise.all([loadImage(portraitFor(result).src), createQRCode(PUBLIC_URL).then(loadImage)]);
     const canvas = document.createElement('canvas'); canvas.width = 900; canvas.height = 1260;
     const context = canvas.getContext('2d');
     if (!context) throw new Error('Canvas unavailable');
@@ -256,7 +258,7 @@ async function makeCard(result, content, trigger, report) {
     context.font = 'bold 100px "Microsoft YaHei", sans-serif'; context.fillText(result.code, 60, 220);
     context.fillStyle = '#292532'; context.font = 'bold 46px "Microsoft YaHei", sans-serif'; context.fillText(result.name, 60, 300);
     context.font = '22px "Microsoft YaHei", sans-serif'; context.fillStyle = '#5636b8'; context.fillText(content.tags.join('  /  '), 60, 365);
-    context.drawImage(mascot, 580, 115, 270, 270);
+    context.drawImage(mascot, 540, 95, 310, 310);
     axes.forEach(([left, right], index) => {
       const y = 525 + index * 105;
       context.fillStyle = '#292532'; context.font = '24px "Microsoft YaHei", sans-serif'; context.fillText(`${left} / ${right}`, 65, y);
@@ -272,7 +274,7 @@ async function makeCard(result, content, trigger, report) {
     context.fillText('百分比为选项计分占比，不是心理测量或人群百分位', 65, 1230);
     const url = canvas.toDataURL('image/png');
     const image = document.createElement('img');
-    image.id = 'card-image'; image.alt = '我的成理刷屏人格分享卡片'; image.width = 900; image.height = 1260; image.src = url;
+    image.id = 'card-image'; image.alt = `${result.name} · 我的成理刷屏人格分享卡片`; image.width = 900; image.height = 1260; image.src = url;
     document.querySelector('#card-slot').replaceChildren(image);
     document.querySelector('#download-card').href = url;
     shareTrigger = trigger; dialog.showModal();
