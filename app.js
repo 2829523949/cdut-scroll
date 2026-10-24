@@ -3,7 +3,7 @@ import { buildInsights } from './insights.js?v=wjx-20261023';
 import { createQRCode } from './qr.js';
 import { collection } from './collection-config.js?v=results-20261023';
 import { PRIVACY_VERSION, newReceipt, sendResponse } from './response-client.js?v=results-20261023';
-import { portraitFor } from './persona-art.js?v=figures-20261024';
+import { portraitFor } from './persona-art.js?v=pigs-20261024';
 
 const PUBLIC_URL = new URL('.', location.href).href;
 const STORAGE_KEY = 'cdut-scroll-questionnaire-v4';
@@ -64,30 +64,23 @@ function renderRoute(focus = true) {
     if (location.hash !== '#home' && location.hash !== '') history.replaceState(null, '', '#home');
     renderHome();
   }
+  document.querySelector('meta[name="theme-color"]').content = app.querySelector('.pig-home') ? '#c6e7f8' : '#f7f5ef';
   if (focus) focusPage();
 }
 function renderHome() {
   document.title = '成理刷屏人格测试 · 成理青年观察';
   const count = answeredCount();
-  app.innerHTML = `<section class="home">
+  const ringCodes = ['SIWQ','SIWV','SIMQ','SIMV','DIWQ','SEWQ','DEMQ','DEWV','SEMQ','SEMV','DEMV','ZEN'];
+  app.innerHTML = `<section class="home pig-home">
     ${count ? `<div class="resume-note">${complete() ? '你的人格画像已解锁，可以再看看。' : `上次已完成 ${count} / ${activeCount(state.answers)} 题，可以接着答。`} <button class="text-button" id="clear-progress">清除本次进度</button></div>` : ''}
-    <div class="hero-layout">
-      <div class="intro"><h1><span>成理人，</span><span>你是哪种</span><span>刷屏人格？</span></h1>
-        <p class="lead">课间随手刷，还是睡前深潜？<br>从内容习惯出发，找到你的校园冲浪同频搭子。</p>
-        <div class="facts"><div><strong>16</strong>题 · 多种题型</div><div><strong>≈ 3</strong>分钟完成</div><div><strong>16 + 1</strong>种画像</div></div>
+    <div class="pig-stage">
+      <div class="pig-ring" aria-hidden="true">${ringCodes.map((code, index) => `<img class="ring-pig pig-${index + 1}" src="${portraitFor({code}).thumbSrc}" alt="" width="384" height="384" decoding="async" draggable="false">`).join('')}</div>
+      <div class="intro home-core"><h1><span>成理人，</span><span>你是哪种</span><span>刷屏人格？</span></h1>
+        <div class="facts"><div><strong>16</strong>道题</div><div><strong>≈ 3</strong>分钟</div><div><strong>16 + 1</strong>种画像</div></div>
         <form id="start-form" class="start-form"><label class="consent"><input type="checkbox" id="agree" name="preview-consent" ${state.consent ? 'checked' : ''} required><span>${collection.enabled ? '我了解这是娱乐向测试，并同意保存本次问卷答案和画像，仅供站点管理者查看与统计。' : '我了解这是娱乐向测试，会按最近 7 天的真实习惯作答。'}</span></label>
           ${collection.enabled ? '<p class="save-notice">保存内容包含性别、年级、专业类别、观看习惯、各题选择及画像，不要求姓名或手机号。按最近 7 天的真实感受填写即可。</p>' : ''}
           <button class="button primary full" type="submit" id="start-button" ${state.consent ? '' : 'disabled'}>${complete() ? '查看我的人格结果' : count ? '继续我的测试' : '解锁我的刷屏人格'} ${arrow}</button>
         </form><p class="helper start-helper">娱乐向测试，不构成心理测量，不代表能力或优劣。</p>
-      </div>
-      <div class="hero-scene">
-        <span class="scene-note note-one">课间随手刷</span>
-        <img class="hero-art" src="assets/scroll-buddies.png" alt="紫色和浅绿色的校园冲浪搭子一起看手机" width="1024" height="1024" fetchpriority="high">
-        <span class="scene-note note-two">睡前再看一条</span>
-        <p class="scene-caption">你的刷屏习惯，偷偷有个人格。</p>
-        <div class="type-tickets" aria-label="部分人格图鉴展示，不代表你的测试结果">
-          <div><span translate="no">SIWQ</span><strong>静音情报员</strong></div><div><span translate="no">DIWV</span><strong>知识传送门</strong></div><div><span translate="no">SEMQ</span><strong>快乐潜水员</strong></div>
-        </div><p class="helper center sample-label">人格图鉴 · 部分展示</p>
       </div>
     </div>
     <div class="home-footnote"><span>第 4 题选择“基本不看”，将直接结束测试。</span><span>没有标准答案，也没有哪一种更优秀。</span></div>
@@ -284,7 +277,7 @@ async function makeCard(result, content, trigger, report) {
 document.querySelector('#public-link').value = PUBLIC_URL;
 document.querySelector('link[rel=canonical]').href = PUBLIC_URL;
 document.querySelector('meta[property="og:url"]').content = PUBLIC_URL;
-document.querySelector('meta[property="og:image"]').content = new URL('assets/scroll-buddies.png', PUBLIC_URL).href;
+document.querySelector('meta[property="og:image"]').content = new URL('assets/pigs/overview.jpg', PUBLIC_URL).href;
 const linkDialog = document.querySelector('#link-dialog');
 let linkTrigger;
 async function openShareLink(trigger) {
